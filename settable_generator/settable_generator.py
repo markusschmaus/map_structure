@@ -44,9 +44,12 @@ class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
             raise RuntimeError(
                 'Generator has already been set to {}'.format(self._send_value))
 
-    def forward(self, send_value: _T_cntr) -> _T_co:
+    def forward(self, send_value: Optional[_T_cntr]) -> _T_co:
         try:
-            return self.generator.send(send_value)
+            if send_value is None:
+                return self.generator.__next__()
+            else:
+                return self.generator.send(send_value)
         except StopIteration as e:
             self._exhausted = True
             self._result = e.value
@@ -64,7 +67,7 @@ class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
               tb: Optional[TracebackType] = None) -> _T_co:
         return self.generator.throw(typ, val, tb)
 
-    def map(self, generator: Generator[_T_co, Any, Any]) -> _V_co:
+    def map(self, generator: Generator[_T_cntr, Any, Any]) -> _V_co:
         for x in generator:
             self.set(x)
 
@@ -75,8 +78,8 @@ GeneratorFactory = Callable[..., Generator[_T_co, _T_cntr, _V_co]]
 
 
 class SettableGeneratorFactory(Generic[_T_co, _T_cntr, _V_co]):
-    generator_factory: GeneratorFactory[_T_co, _T_cntr, _V_co]
     default: _T_cntr
+    _generator_factory: GeneratorFactory[_T_co, _T_cntr, _V_co]
     _latest: SettableGenerator[_T_co, _T_cntr, _V_co]
 
     def __init__(
@@ -84,18 +87,18 @@ class SettableGeneratorFactory(Generic[_T_co, _T_cntr, _V_co]):
             generator_factory: GeneratorFactory[_T_co, _T_cntr, _V_co],
             default: _T_cntr = None,
     ):
-        self.generator_factory = generator_factory
+        self._generator_factory = generator_factory
         self.default = default
 
     def __call__(self, *args, **kwargs) \
             -> SettableGenerator[_T_co, _T_cntr, _V_co]:
         self._latest = SettableGenerator(
-            self.generator_factory(*args, **kwargs),
+            self._generator_factory(*args, **kwargs),
             default=self.default,
         )
         return self._latest
 
-    def map(self, generator: Generator[_T_co, Any, Any]) -> _V_co:
+    def map(self, generator: Generator[_T_cntr, Any, Any]) -> _V_co:
         for x in generator:
             self._latest.set(x)
 
@@ -121,9 +124,9 @@ def settable(
 
 
 def settable(
-        generator: GeneratorFactory[_T_co, _T_cntr, _V_co] = None,
+        generator = None,
         *,
-        default: _T_cntr = None,
+        default = None,
 ):
     if generator is None:
         return partial(settable, default=default)
