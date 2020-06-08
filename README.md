@@ -1,5 +1,5 @@
-# map_structure
-Use python generators to create a copy of some structured container with it's values modified
+# settable_generator
+Allow python generators to receive values in for loops.
 
 Guido van van Rossum, the author of Python, famously isn't very fond of `lambda` expressions and the functional constructs like `map` or `filter` which use them. He even [suggested removing them altogether](https://www.artima.com/weblogs/viewpost.jsp?thread=98196), pointing out that a list comprehension is a more pythonic alternative: 
 ```python
@@ -27,22 +27,6 @@ This package combines these two options by providing a `map` function which uses
 ```python
 container.map(f(x) for x in container if cond(x))
 ``` 
-
-It also provides this functionality for nested builtin contains.
-
-```python
-structure = map_structure(
-    {'a': 1, 'b': [[2, 3], 4], 'c': 2, 'd': 5}
-)
-
-structure.map(
-    2 * x
-    for x in structure  
-    if x != 2
-)
-```
-
-returns `{'a': 2, 'b': [[6], 8], 'd': 10}`
 
 ## Settable generators
 
