@@ -1,6 +1,6 @@
 import pytest
 
-from map_structure.settable_generator import settable
+from settable_generator.settable_generator import settable
 
 
 @pytest.fixture()
