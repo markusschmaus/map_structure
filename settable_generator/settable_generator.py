@@ -10,7 +10,7 @@ _T_cntr = TypeVar('_T_cntr', contravariant=True)
 
 class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
     generator: Generator[_T_co, _T_cntr, _V_co]
-    _result: Optional[_V_co]
+    _result: _V_co
     _send_value: Optional[_T_cntr]
     _is_set: bool
     _exhausted: bool
@@ -19,7 +19,6 @@ class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
                  default: _T_cntr = None):
         self.generator = generator
         self.default = default
-        self._result = None
         self._send_value = None
         self._is_set = False
         self._exhausted = False
@@ -38,6 +37,12 @@ class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
     def send(self, send_value: _T_cntr) -> _T_co:
         self.guard_is_set()
         return self.forward(send_value)
+
+    def __iter__(self):
+        return self
+
+    def close(self):
+        return super().close()
 
     def guard_is_set(self):
         if self._is_set:
@@ -82,10 +87,21 @@ class SettableGeneratorFactory(Generic[_T_co, _T_cntr, _V_co]):
     _generator_factory: GeneratorFactory[_T_co, _T_cntr, _V_co]
     _latest: SettableGenerator[_T_co, _T_cntr, _V_co]
 
+    @overload
     def __init__(
             self,
             generator_factory: GeneratorFactory[_T_co, _T_cntr, _V_co],
-            default: _T_cntr = None,
+    ): ...
+    @overload
+    def __init__(
+            self,
+            generator_factory: GeneratorFactory[_T_co, _T_cntr, _V_co],
+            default: _T_cntr,
+    ): ...
+    def __init__(
+            self,
+            generator_factory,
+            default=None,
     ):
         self._generator_factory = generator_factory
         self.default = default

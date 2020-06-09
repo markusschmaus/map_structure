@@ -1,4 +1,4 @@
-import pytest
+import pytest # type: ignore
 
 from settable_generator.settable_generator import settable
 
