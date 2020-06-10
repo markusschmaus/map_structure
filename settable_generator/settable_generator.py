@@ -1,6 +1,7 @@
 from functools import wraps, partial
 from types import TracebackType
-from typing import TypeVar, Generator, Type, Optional, Any, overload, Callable, \
+from typing import TypeVar, Generator, Type, Optional, Any, overload, \
+    Callable, \
     Generic
 
 _T_co = TypeVar('_T_co', covariant=True)
@@ -47,7 +48,8 @@ class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
     def guard_is_set(self):
         if self._is_set:
             raise RuntimeError(
-                'Generator has already been set to {}'.format(self._send_value))
+                'Generator has already been set to {}'.format(
+                    self._send_value))
 
     def forward(self, send_value: Optional[_T_cntr]) -> _T_co:
         try:
@@ -92,12 +94,14 @@ class SettableGeneratorFactory(Generic[_T_co, _T_cntr, _V_co]):
             self,
             generator_factory: GeneratorFactory[_T_co, _T_cntr, _V_co],
     ): ...
+
     @overload
     def __init__(
             self,
             generator_factory: GeneratorFactory[_T_co, _T_cntr, _V_co],
             default: _T_cntr,
     ): ...
+
     def __init__(
             self,
             generator_factory,
@@ -136,9 +140,9 @@ def settable(
         *,
         default: _T_cntr = None,
 ) -> Callable[
-           [GeneratorFactory[_T_co, _T_cntr, _V_co]],
-           SettableGeneratorFactory[_T_co, _T_cntr, _V_co],
-        ]: ...
+    [GeneratorFactory[_T_co, _T_cntr, _V_co]],
+    SettableGeneratorFactory[_T_co, _T_cntr, _V_co],
+]: ...
 
 
 @overload
@@ -150,9 +154,9 @@ def settable(
 
 
 def settable(
-        generator = None,
+        generator=None,
         *,
-        default = None,
+        default=None,
 ):
     if generator is None:
         return partial(settable, default=default)

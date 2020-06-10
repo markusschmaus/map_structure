@@ -1,4 +1,4 @@
-import pytest # type: ignore
+import pytest  # type: ignore
 
 from settable_generator.settable_generator import settable
 
@@ -83,7 +83,7 @@ def test_settable_yield_from(func, settable_generator):
 
 def test_assignment_expression(func, settable_generator):
     for x in (gen := settable_generator()):
-            gen.set(func(x))
+        gen.set(func(x))
     result = gen.result
     assert result == [func(x) for x in range(3)]
 
