@@ -86,3 +86,28 @@ def test_assignment_expression(func, settable_generator):
             gen.set(func(x))
     result = gen.result
     assert result == [func(x) for x in range(3)]
+
+
+def test_method(generator):
+    class C:
+        def __init__(self):
+            self.accumulator = []
+
+        @settable
+        def generator(self):
+            for x in generator():
+                res = yield x
+                self.accumulator.append(res)
+            return self.accumulator
+
+    c = C()
+
+    for x in (g := c.generator()):
+        g.set(x)
+
+    assert c.accumulator == list(range(3))
+
+    for x in (g := c.generator()):
+        g.set(3 + x)
+
+    assert c.accumulator == list(range(6))

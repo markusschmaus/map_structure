@@ -120,6 +120,16 @@ class SettableGeneratorFactory(Generic[_T_co, _T_cntr, _V_co]):
 
         return self._latest.result
 
+    def __get__(self, instance, owner=None):
+        """Implement the descriptor protocol to make decorating instance
+        method possible.
+
+        """
+
+        # Return a partial function with the first argument is the instance
+        #   of the class decorated.
+        return partial(self.__call__, instance)
+
 
 @overload
 def settable(
