@@ -1,43 +1,70 @@
 from functools import wraps, partial
 from types import TracebackType
 from typing import TypeVar, Generator, Type, Optional, Any, overload, \
-    Callable, \
-    Generic
+    Callable, Generic, Union
+
 
 _T_co = TypeVar('_T_co', covariant=True)
 _V_co = TypeVar('_V_co', covariant=True)
 _T_cntr = TypeVar('_T_cntr', contravariant=True)
+_T = TypeVar('_T')
+
+
+class UnsetType:
+    def __repr__(self):
+        return "Unset"
+
+
+Unset = UnsetType()
+
+MaybeUnset = Union[UnsetType, _T]
 
 
 class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
     generator: Generator[_T_co, _T_cntr, _V_co]
     _result: _V_co
-    _send_value: Optional[_T_cntr]
-    _is_set: bool
+    default: MaybeUnset[_T_cntr]
+    _send_value: MaybeUnset[_T_cntr]
+    _initialized: bool
     _exhausted: bool
 
-    def __init__(self, generator: Generator[_T_co, _T_cntr, _V_co],
-                 default: _T_cntr = None):
+    def __init__(
+            self,
+            generator: Generator[_T_co, _T_cntr, _V_co],
+            default: MaybeUnset[_T_cntr] = Unset
+    ):
         self.generator = generator
         self.default = default
-        self._send_value = None
-        self._is_set = False
+        self._send_value = Unset
         self._exhausted = False
+        self._initialized = False
 
     def set(self, value: _T_cntr):
-        self.guard_is_set()
+        if not self._initialized:
+            raise RuntimeError('Generator first needs to be initilized by '
+                               'calling next')
+        self._ensure_not_set()
         self._send_value = value
-        self._is_set = True
 
     def __next__(self) -> _T_co:
-        send_value = self._send_value
-        self._is_set = False
-        self._send_value = self.default
+        send_value: _T_cntr
+        if not isinstance(self._send_value, UnsetType):
+            send_value = self._send_value
+        else:
+            if isinstance(self.default, UnsetType):
+                raise RuntimeError('Generator not set and no default provided')
+            else:
+                send_value = self.default
+        self._send_value = Unset
         return self.forward(send_value)
 
     def send(self, send_value: _T_cntr) -> _T_co:
-        self.guard_is_set()
+        self._ensure_not_set()
         return self.forward(send_value)
+
+    @property
+    def is_set(self) -> bool:
+        return not isinstance(self._send_value, UnsetType)
 
     def __iter__(self):
         return self
@@ -45,18 +72,19 @@ class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
     def close(self):
         return super().close()
 
-    def guard_is_set(self):
-        if self._is_set:
+    def _ensure_not_set(self):
+        if self.is_set:
             raise RuntimeError(
                 'Generator has already been set to {}'.format(
                     self._send_value))
 
-    def forward(self, send_value: Optional[_T_cntr]) -> _T_co:
+    def forward(self, send_value: _T_cntr) -> _T_co:
         try:
-            if send_value is None:
-                return self.generator.__next__()
-            else:
+            if self._initialized:
                 return self.generator.send(send_value)
+            else:
+                self._initialized = True
+                return self.generator.__next__()
         except StopIteration as e:
             self._exhausted = True
             self._result = e.value
