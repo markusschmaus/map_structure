@@ -47,16 +47,20 @@ class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
         self._send_value = value
 
     def __next__(self) -> _T_co:
-        send_value: _T_cntr
-        if not isinstance(self._send_value, UnsetType):
-            send_value = self._send_value
-        else:
-            if isinstance(self.default, UnsetType):
-                raise RuntimeError('Generator not set and no default provided')
+        if self._initialized:
+            send_value: _T_cntr
+            if not isinstance(self._send_value, UnsetType):
+                send_value = self._send_value
             else:
-                send_value = self.default
-        self._send_value = Unset
-        return self.forward(send_value)
+                if isinstance(self.default, UnsetType):
+                    raise RuntimeError('Generator not set and no default provided')
+                else:
+                    send_value = self.default
+            self._send_value = Unset
+            return self.forward(send_value)
+        else:
+            self._initialized = True
+            return self.generator.__next__()
 
     def send(self, send_value: _T_cntr) -> _T_co:
         self._ensure_not_set()
@@ -80,11 +84,7 @@ class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
 
     def forward(self, send_value: _T_cntr) -> _T_co:
         try:
-            if self._initialized:
-                return self.generator.send(send_value)
-            else:
-                self._initialized = True
-                return self.generator.__next__()
+            return self.generator.send(send_value)
         except StopIteration as e:
             self._exhausted = True
             self._result = e.value
@@ -133,7 +133,7 @@ class SettableGeneratorFactory(Generic[_T_co, _T_cntr, _V_co]):
     def __init__(
             self,
             generator_factory,
-            default=None,
+            default=Unset,
     ):
         self._generator_factory = generator_factory
         self.default = default
