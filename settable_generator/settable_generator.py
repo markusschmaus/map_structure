@@ -60,7 +60,12 @@ class SettableGenerator(Generator[_T_co, _T_cntr, _V_co]):
             return self.forward(send_value)
         else:
             self._initialized = True
-            return self.generator.__next__()
+            try:
+                return self.generator.__next__()
+            except StopIteration as e:
+                self._exhausted = True
+                self._result = e.value
+                raise e
 
     def send(self, send_value: _T_cntr) -> _T_co:
         self._ensure_not_set()
